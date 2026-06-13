@@ -5,8 +5,6 @@ second, prompt-defined task hurts the speculation it's there for. We measure the
 draft's **acceptance rate** during summary generation under three conditions and
 attribute any drop to either *content leak* or *RoPE position shift*.
 
-> Code only for now; the write-up and proof live elsewhere.
-
 ## Setup
 
 ```bash
@@ -40,8 +38,10 @@ DEVICE=mps MODEL_TIER=big python sweeps.py \
     --n 100 --max-chars 3000 --summaries data/canonical_summaries_big.jsonl
 ```
 
-Use `DEVICE=cpu MODEL_TIER=small` (and matching `--summaries`) for a fast local
-correctness loop.
+For a fast local correctness loop, run all three steps under
+`DEVICE=cpu MODEL_TIER=small`, saving the summaries to
+`data/canonical_summaries_small.jsonl` and passing that same path as
+`--summaries` to `acceptance.py` and `sweeps.py`.
 
 ## Files
 
