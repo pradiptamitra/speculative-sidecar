@@ -31,7 +31,7 @@ Design notes that keep the decomposition clean:
     the suffix therefore reproduces the baseline's content bit-for-bit; the only
     baseline<->masked difference is the +n position shift.
 
-    DEVICE=cpu MODEL_TIER=dev python acceptance.py --n 10 --max-chars 3000
+    DEVICE=cpu MODEL_TIER=small python acceptance.py --n 10 --max-chars 3000
 """
 
 import argparse

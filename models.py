@@ -1,13 +1,12 @@
 """Model-pair loader for the speculative-decoding sidecar experiments.
 
-Same code, two tiers and three devices, selected by env vars (per the research
-note's section 5.3):
+Same code, two model-pair sizes and three devices, selected by env vars:
 
-    MODEL_TIER = dev | prod      # which (target, draft) pair
+    MODEL_TIER = small | big     # which (target, draft) pair
     DEVICE     = cpu | mps | cuda
 
-    dev  : target Qwen2.5-1.5B-Instruct, draft Qwen2.5-0.5B-Instruct  (CPU loop)
-    prod : target Qwen2.5-7B-Instruct,   draft Qwen2.5-1.5B-Instruct  (MPS/cloud)
+    small : target Qwen2.5-1.5B-Instruct, draft Qwen2.5-0.5B-Instruct  (fast local loop)
+    big   : target Qwen2.5-7B-Instruct,   draft Qwen2.5-1.5B-Instruct  (MPS/cloud)
 
 Weights are pulled from the HF Hub on first use (Qwen2.5 is Apache-2.0 and
 ungated, no token needed) and cached under ~/.cache/huggingface afterwards.
@@ -25,14 +24,14 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 PAIRS = {
-    "dev": ("Qwen/Qwen2.5-1.5B-Instruct", "Qwen/Qwen2.5-0.5B-Instruct"),
-    "prod": ("Qwen/Qwen2.5-7B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct"),
+    "small": ("Qwen/Qwen2.5-1.5B-Instruct", "Qwen/Qwen2.5-0.5B-Instruct"),
+    "big": ("Qwen/Qwen2.5-7B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct"),
 }
 
 
 def get_config() -> dict:
     """Resolve tier/device/dtype from the environment."""
-    tier = os.environ.get("MODEL_TIER", "dev")
+    tier = os.environ.get("MODEL_TIER", "small")
     device = os.environ.get("DEVICE", "cpu")
     if tier not in PAIRS:
         raise ValueError(f"MODEL_TIER must be one of {list(PAIRS)}, got {tier!r}")

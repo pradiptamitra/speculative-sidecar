@@ -13,7 +13,7 @@ We store the generated token IDs (not just text): the acceptance math compares
 p_target vs p_draft at the exact same token positions, and decode->re-encode is
 not guaranteed to round-trip, so the IDs are the source of truth.
 
-    python canonical_summaries.py --n 10 --max-chars 3000   # quick dev run
+    python canonical_summaries.py --n 10 --max-chars 3000   # quick local run
     python canonical_summaries.py --n 100                    # full snapshot
 """
 
@@ -36,7 +36,7 @@ def main() -> None:
         "--max-chars",
         type=int,
         default=None,
-        help="truncate each article to this many chars (dev speed); None = full",
+        help="truncate each article to this many chars (local-loop speed); None = full",
     )
     ap.add_argument("--out", default="data/canonical_summaries.jsonl")
     args = ap.parse_args()

@@ -19,7 +19,7 @@ Models (Qwen2.5-Instruct, Apache-2.0, ungated) download from the HF Hub on first
 use. Device/size are env-var knobs:
 
 - `DEVICE` = `cpu` | `mps` | `cuda`
-- `MODEL_TIER` = `dev` (1.5B target / 0.5B draft) | `prod` (7B target / 1.5B draft)
+- `MODEL_TIER` = `small` (1.5B target / 0.5B draft) | `big` (7B target / 1.5B draft)
 
 ## Reproduce
 
@@ -28,19 +28,19 @@ use. Device/size are env-var knobs:
 python fetch_documents.py --n 100
 
 # 2. target's greedy summaries (the reference path)
-DEVICE=mps MODEL_TIER=prod python canonical_summaries.py \
-    --n 100 --max-chars 3000 --out data/canonical_summaries_prod.jsonl
+DEVICE=mps MODEL_TIER=big python canonical_summaries.py \
+    --n 100 --max-chars 3000 --out data/canonical_summaries_big.jsonl
 
 # 3. acceptance experiment: baseline vs visible vs masked
-DEVICE=mps MODEL_TIER=prod python acceptance.py \
-    --n 100 --max-chars 3000 --summaries data/canonical_summaries_prod.jsonl
+DEVICE=mps MODEL_TIER=big python acceptance.py \
+    --n 100 --max-chars 3000 --summaries data/canonical_summaries_big.jsonl
 
 # 4. n-sweep (RoPE vs suffix length) + depth profile
-DEVICE=mps MODEL_TIER=prod python sweeps.py \
-    --n 100 --max-chars 3000 --summaries data/canonical_summaries_prod.jsonl
+DEVICE=mps MODEL_TIER=big python sweeps.py \
+    --n 100 --max-chars 3000 --summaries data/canonical_summaries_big.jsonl
 ```
 
-Use `DEVICE=cpu MODEL_TIER=dev` (and matching `--summaries`) for a fast local
+Use `DEVICE=cpu MODEL_TIER=small` (and matching `--summaries`) for a fast local
 correctness loop.
 
 ## Files

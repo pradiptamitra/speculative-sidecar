@@ -16,10 +16,10 @@
 prompt with the suffix visible, `masked` = compound prompt with the suffix masked
 and naive positions.)
 
-    DEVICE=cpu  MODEL_TIER=dev  python sweeps.py --n 10 --max-chars 3000
-    DEVICE=mps  MODEL_TIER=prod PYTORCH_ENABLE_MPS_FALLBACK=1 \
+    DEVICE=cpu  MODEL_TIER=small python sweeps.py --n 10 --max-chars 3000
+    DEVICE=mps  MODEL_TIER=big   PYTORCH_ENABLE_MPS_FALLBACK=1 \
         python sweeps.py --n 10 --max-chars 3000 \
-        --summaries data/canonical_summaries_prod.jsonl
+        --summaries data/canonical_summaries_big.jsonl
 """
 
 import argparse
