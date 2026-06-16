@@ -2,7 +2,8 @@
 
 The canonical summary is the TARGET model's greedy continuation of the bare
 summary prompt. It is the single fixed token sequence y_1..y_S that every
-acceptance condition (B / E2 / G0) teacher-forces against in acceptance.py, so
+acceptance condition (baseline / visible / masked) teacher-forces against in
+acceptance.py, so
 we generate it once, deterministically, and freeze it to disk.
 
 Greedy (do_sample=False) is deliberate: alpha must reflect the draft/target

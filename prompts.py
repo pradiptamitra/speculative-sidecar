@@ -14,7 +14,7 @@ SUMMARY_INSTRUCTION = (
 )
 
 # The hashtag sidecar suffix, appended AFTER the summary instruction. Used by the
-# E2 and Variation-G acceptance conditions (not by the bare baseline, and not by
+# visible and masked acceptance conditions (not by the bare baseline, and not by
 # canonical summary generation). "above" refers to the summary that will sit in
 # the KV cache by the time this suffix is active.
 HASHTAG_SUFFIX = (
@@ -30,14 +30,13 @@ FRENCH_SUFFIX = "Then translate the summary above into French."
 def build_summary_messages(document: str, suffix: str | None = None) -> list[dict]:
     """Chat messages for the summarization turn.
 
-    Layout follows the research note: [document][summary instruction][suffix],
-    with the suffix LAST so it is a contiguous trailing block (maskable for
-    Variation G) and so "the summary above" reads correctly once generation
-    begins after it.
+    Layout is [document][summary instruction][suffix], with the suffix LAST so it
+    is a contiguous trailing block (maskable for the masked condition) and so "the
+    summary above" reads correctly once generation begins after it.
 
     suffix=None -> the bare summary prompt (target's actual prompt, and the
     baseline draft prompt). A non-None suffix appends a compound instruction
-    after the summary instruction (the E2 / control draft prompts).
+    after the summary instruction (the visible / control draft prompts).
     """
     user = f"Document:\n{document}\n\n{SUMMARY_INSTRUCTION}"
     if suffix is not None:

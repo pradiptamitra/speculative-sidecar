@@ -13,7 +13,8 @@ ungated, no token needed) and cached under ~/.cache/huggingface afterwards.
 
 Notes that matter for the experiments:
 - attn_implementation="eager" so we can pass a custom 4D additive attention mask
-  (Variation G's suffix mask). flex_attention is CUDA-oriented and skipped here.
+  (the masked condition's suffix mask). flex_attention is CUDA-oriented and
+  skipped here.
 - target and draft share the Qwen2.5 tokenizer, which speculative decoding
   requires; we load it once and return it.
 """

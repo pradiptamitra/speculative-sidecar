@@ -19,9 +19,6 @@ Decomposition:
   alpha(baseline) - alpha(masked)  = pure RoPE / position effect
   alpha(masked)   - alpha(visible) = pure content-leak effect
 
-(Relation to the research note's taxonomy: `visible` is Variation E2, `masked`
-is the naive, un-rebased Variation G.)
-
 Design notes that keep the decomposition clean:
   * visible and masked use the identical token sequence; they differ only in the
     mask, so their gap isolates content visibility with positions held fixed.
