@@ -1,8 +1,6 @@
 # Acceptance-Rate Experiments: Hashtag-Suffix Leak and RoPE Mismatch
 
-Scoping note for the first two experiments. Companion to
-[speculative_draft_sidecar_research.md](speculative_draft_sidecar_research.md);
-read sections 3 (Variations E2, G) and the RoPE discussion there for full context.
+Scoping note for the first two experiments.
 
 ## Goal
 
@@ -11,16 +9,16 @@ summary phase, when we move from a bare draft prompt toward the sidecar designs.
 We want to attribute any degradation to one of two distinct causes:
 
 1. **Content leak** — the draft can *see* the hashtag suffix and so conditions
-   its summary tokens on it (Variation E2).
+   its summary tokens on it (the `visible` condition below).
 2. **Position mismatch** — the draft's summary tokens sit at the wrong RoPE
    positions because the prefilled suffix pushed them `n` slots later (the naive
-   Variation G layout, before position rebasing).
+   layout, before position rebasing; the `masked` condition below).
 
 These are normally tangled together. The trick here is to run an intermediate
 condition that has the position shift but *not* the content leak, which isolates
 each effect.
 
-## Notation (recap from the main note)
+## Notation
 
 All are token counts of prefilled segments:
 
@@ -74,9 +72,9 @@ user asked for.
 **Question:** does telling the draft "you'll also produce hashtags afterward"
 change how it drafts the summary, costing acceptance?
 
-**Assumption under test (from the note):** for an idealized instruction-follower
-`P(summary | "do A then B") = P(summary | "do A")`, so α(visible) ≈ α(baseline). The note
-predicts this *leaks* in practice (length/structure conditioning, format
+**Assumption under test:** for an idealized instruction-follower
+`P(summary | "do A then B") = P(summary | "do A")`, so α(visible) ≈ α(baseline). We
+expect this to *leak* in practice (length/structure conditioning, format
 bleed-through, attention reallocation), more so because the draft is the small
 model.
 
@@ -84,7 +82,7 @@ model.
 (`"Summarize. Then translate to French."`) to separate "any future instruction
 shifts drafting" from "hashtag-specific shifts drafting."
 
-## Experiment 2 — RoPE position effect (naive G)
+## Experiment 2 — RoPE position effect (masked)
 
 **Question:** if we mask the suffix so the draft's *content* conditioning matches
 the target exactly, but leave the generated summary tokens at their naive
@@ -160,7 +158,7 @@ documents. A small table + the α-vs-`n` curve for masked is enough for a first 
 
 ## Models and config
 
-Per the main note's tiering:
+Model tiers:
 
 - **dev** (Mac CPU correctness loop): target Qwen2.5-1.5B-Instruct, draft
   Qwen2.5-0.5B-Instruct.
@@ -177,8 +175,8 @@ the first pass.
 ## What the results would mean
 
 - **α(visible) ≈ α(baseline):** the compound prompt is essentially free; the sidecar can ride
-  on visible and most of the Variation-G machinery is unnecessary. Strong, simple
-  result.
+  on visible and most of the position-rebasing machinery is unnecessary. Strong,
+  simple result.
 - **α(visible) < α(baseline), and α(masked) ≈ α(baseline):** the leak is pure content conditioning, not
   position. Masking (without needing position rebasing) is the fix.
 - **α(masked) < α(baseline):** RoPE mismatch is real and `n`-dependent; this directly
