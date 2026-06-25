@@ -1,31 +1,67 @@
 # speculative-sidecar
 
-Code accompanying the post **[Speculative Decoding for Fun and Profit I](https://pradiptamitra.github.io/2026/06/17/speculative-decoding-for-fun-and-profit-i/)**.
+Code accompanying the *Speculative Decoding for Fun and Profit* series:
 
-That post asks: if you reuse a speculative-decoding **draft** model for a second,
-prompt-defined task (generating hashtags after a summary), does appending that
-task to the draft's prompt hurt its **acceptance rate**? This repo reproduces the
-one experiment behind that post — the drop in acceptance when the draft is given
-the compound ("now also output hashtags") prompt instead of the plain one.
+- **[Part I — the acceptance leak](https://pradiptamitra.github.io/2026/06/17/speculative-decoding-for-fun-and-profit-i/)**
+- **[Part II — masking and the RoPE position shift](https://pradiptamitra.github.io/2026/06/25/speculative-decoding-for-fun-and-profit-ii/)**
 
-> The repo contains more code than this README uses (`sweeps.py` and the `masked`
-> condition are for a later post). For now this README covers only the first
-> post's result.
+The series asks: if you reuse a speculative-decoding **draft** model for a second,
+prompt-defined task (generating hashtags after a summary), what does it cost the
+draft's **acceptance rate**? Part I measures the cost of giving the draft the
+compound ("now also output hashtags") prompt. Part II measures the cost of the
+fix — masking the suffix during the summary — and the RoPE position shift that
+masking introduces. This repo reproduces the numbers behind both posts.
+
+Everything is **teacher-forced**: we generate the target's greedy summary once,
+then read both models' next-token distributions over those same tokens and
+average the overlap $\sum_v \min(p,q)$ — the exact expected acceptance rate. There
+is no stochastic accept/reject loop. See the posts for the derivation.
+
+## The three conditions
+
+`acceptance.py` scores the draft under three setups, all against the *same* target
+summary (so only the draft's setup varies):
+
+| condition | draft prompt | suffix in context | summary positions |
+|---|---|---|---|
+| `baseline` | bare "summarize" | absent | natural (matches target) |
+| `visible`  | compound ("…then hashtags") | present, **attended** | shifted by `n` |
+| `masked`   | compound | present but **masked** | shifted by `n` |
+
+- **Part I** is `baseline` vs `visible` — the content leak.
+- **Part II** is `baseline` vs `masked` — the pure position (RoPE) cost, since
+  `masked` has baseline-identical content and differs only by the `+n` shift —
+  plus the n-sweep from `sweeps.py`.
 
 ## What you'll reproduce
 
-For each model pair, acceptance with **identical** draft/target prompts vs. a
-**compound** draft prompt (target prompt unchanged), over 100 CNN/DailyMail
-articles:
+All over 100 CNN/DailyMail articles. (Exact figures vary slightly with
+hardware/dtype.)
 
-| pair | α (identical prompts) | α (compound draft prompt) | relative drop |
+**Part I — content leak** (`baseline` vs `visible`):
+
+| pair | α(baseline) | α(visible) | relative drop |
 |---|---|---|---|
 | small (1.5B / 0.5B) | ~0.649 | ~0.616 | ~−5.1% |
 | big (7B / 1.5B) | ~0.636 | ~0.627 | ~−1.4% |
 
-(Exact figures vary slightly with hardware/dtype.) In `acceptance.py`'s output,
-"identical prompts" is the **`baseline`** condition and "compound draft prompt"
-is **`visible`**; ignore the `masked` column for this post.
+**Part II — position cost** (`baseline` vs `masked`, real `n ≈ 25` suffix):
+
+| pair | α(baseline) | α(masked) | position cost (baseline − masked) | relative |
+|---|---|---|---|---|
+| small (1.5B / 0.5B) | ~0.649 | ~0.645 | ~+0.0045 | ~+0.7% |
+| big (7B / 1.5B) | ~0.636 | ~0.639 | ~−0.0030 | ~−0.5% |
+
+**Part II — n-sweep** (position cost `baseline − masked` vs suffix length, from
+`sweeps.py`):
+
+| n | small | big |
+|---|---|---|
+| 25 | +0.0045 | −0.0030 |
+| 50 | +0.0068 | −0.0037 |
+| 100 | +0.0091 | −0.0081 |
+| 200 | +0.0123 | −0.0099 |
+| 400 | +0.0150 | −0.0093 |
 
 ## Setup
 
@@ -43,6 +79,9 @@ use. Two env-var knobs select the run:
 
 ## Reproduce
 
+One `acceptance.py` run per pair yields **all three conditions** — i.e. both
+posts' headline numbers. `sweeps.py` adds Part II's n-sweep.
+
 ```bash
 # 0. one-time: snapshot 100 CNN/DailyMail articles -> data/cnndm_test.jsonl
 python fetch_documents.py --n 100
@@ -52,26 +91,29 @@ DEVICE=mps MODEL_TIER=big python canonical_summaries.py \
     --n 100 --max-chars 3000 --out data/canonical_summaries_big.jsonl
 DEVICE=mps MODEL_TIER=big python acceptance.py \
     --n 100 --max-chars 3000 --summaries data/canonical_summaries_big.jsonl
+DEVICE=mps MODEL_TIER=big python sweeps.py \
+    --n 100 --max-chars 3000 --summaries data/canonical_summaries_big.jsonl
 
 # --- small pair (Qwen2.5-1.5B target / 0.5B draft) ---
 DEVICE=mps MODEL_TIER=small python canonical_summaries.py \
     --n 100 --max-chars 3000 --out data/canonical_summaries_small.jsonl
 DEVICE=mps MODEL_TIER=small python acceptance.py \
     --n 100 --max-chars 3000 --summaries data/canonical_summaries_small.jsonl
+DEVICE=mps MODEL_TIER=small python sweeps.py \
+    --n 100 --max-chars 3000 --summaries data/canonical_summaries_small.jsonl
 ```
 
-Each `acceptance.py` run prints the per-condition α and the decomposition; read
-off `alpha(baseline)` and `alpha(visible)` and their difference. Swap
-`DEVICE=mps` for `DEVICE=cpu` for a slower but device-independent run. The
-`--max-chars` value **must match** between `canonical_summaries.py` and
-`acceptance.py` (an assertion enforces it).
+Reading off the numbers:
 
-## How it works (one line)
+- **Part I:** from `acceptance.py`, `alpha(baseline)` and `alpha(visible)` (and
+  their difference, the `total leak` line).
+- **Part II:** from `acceptance.py`, the `alpha(baseline) - alpha(masked)` line
+  (printed as the *pure RoPE / position effect*). From `sweeps.py`, the
+  `base-masked` column across `n` (also written to `data/nsweep_{tier}.csv`).
 
-We don't run the stochastic accept/reject loop. We generate the target's greedy
-summary once, then teacher-force both models over it in a single pass each and
-average the distribution overlap $\sum_v \min(p,q)$ — the exact expected
-acceptance rate. See the post for the derivation.
+Swap `DEVICE=mps` for `DEVICE=cpu` for a slower but device-independent run. The
+`--max-chars` value **must match** between `canonical_summaries.py`, `acceptance.py`,
+and `sweeps.py` (an assertion enforces it).
 
 ## Files
 
@@ -82,5 +124,5 @@ acceptance rate. See the post for the derivation.
 | `models.py` | load the target/draft pair (env-var tier + device) |
 | `prompts.py` | shared summary + hashtag-suffix prompts |
 | `canonical_summaries.py` | generate the target's greedy summaries |
-| `acceptance.py` | teacher-forced acceptance (`baseline` / `visible` / `masked`) |
-| `sweeps.py` | extended analysis (later post): n-sweep + depth profile |
+| `acceptance.py` | teacher-forced acceptance: `baseline` / `visible` / `masked` + decomposition (Parts I & II) |
+| `sweeps.py` | Part II n-sweep (position cost vs `n`) + depth profile; writes `data/nsweep_{tier}.csv`, `data/depth_{tier}.csv` |
